@@ -1,0 +1,14 @@
+.claude/
+.firebase/
+__pycache__/
+*.log
+*.py
+*.bat
+*.zip
+*.txt
+public/
+deploy.zip
+firebase.json
+.firebaserc
+waiting-time.html
+test_models.py

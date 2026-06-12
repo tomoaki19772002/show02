@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>診察案内システム</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 1.3rem;
+      color: #2c5f8a;
+      letter-spacing: 0.05em;
+    }
+
+    /* 表示パネル */
+    .display-panel {
+      background: #1a3a5c;
+      border-radius: 20px;
+      padding: 50px 100px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+      min-width: 560px;
+    }
+
+    .display-panel .label {
+      color: #7eb8e8;
+      font-size: 1.4rem;
+      margin-bottom: 10px;
+      letter-spacing: 0.15em;
+    }
+
+    .display-panel .number {
+      color: #fff;
+      font-size: 11rem;
+      font-weight: bold;
+      line-height: 1;
+      letter-spacing: 0.05em;
+      min-height: 1.1em;
+      transition: opacity 0.3s;
+    }
+
+    .display-panel .number.empty {
+      color: #3a5a7a;
+      font-size: 4rem;
+      line-height: 2.8;
+    }
+
+    .display-panel .room-label {
+      color: #7eb8e8;
+      font-size: 1.4rem;
+      margin-top: 20px;
+      letter-spacing: 0.1em;
+    }
+
+    .display-panel .room-number {
+      color: #ffd166;
+      font-size: 5rem;
+      font-weight: bold;
+      min-height: 1.2em;
+    }
+
+    .display-panel .room-number.empty {
+      color: #3a5a7a;
+      font-size: 2rem;
+      line-height: 3;
+    }
+
+    /* 操作パネル */
+    .control-panel {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px 24px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 420px;
+    }
+
+    .form-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .form-row label {
+      font-size: 0.85rem;
+      color: #444;
+      white-space: nowrap;
+      width: 72px;
+    }
+
+    .form-row input[type="number"] {
+      flex: 1;
+      padding: 8px 12px;
+      font-size: 1.1rem;
+      border: 2px solid #b0c8e0;
+      border-radius: 6px;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-row input[type="number"]:focus {
+      border-color: #2c5f8a;
+    }
+
+    .room-buttons {
+      display: flex;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .room-btn {
+      flex: 1;
+      padding: 8px;
+      font-size: 0.95rem;
+      border: 2px solid #b0c8e0;
+      border-radius: 6px;
+      background: #f7fafd;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: bold;
+      color: #2c5f8a;
+    }
+
+    .room-btn.selected {
+      background: #2c5f8a;
+      border-color: #2c5f8a;
+      color: #fff;
+    }
+
+    .room-btn:hover:not(.selected) {
+      background: #e0ecf8;
+    }
+
+    .announce-btn {
+      padding: 10px;
+      font-size: 1rem;
+      font-weight: bold;
+      background: #2c8a5f;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      letter-spacing: 0.1em;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .announce-btn:hover { background: #237a52; }
+    .announce-btn:active { transform: scale(0.98); }
+    .announce-btn:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+
+    .repeat-btn {
+      padding: 7px;
+      font-size: 0.85rem;
+      background: #5a7a9a;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+      letter-spacing: 0.05em;
+    }
+
+    .repeat-btn:hover { background: #4a6a8a; }
+    .repeat-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+    .status {
+      text-align: center;
+      font-size: 0.82rem;
+      color: #666;
+      min-height: 1.2em;
+    }
+
+    .status.speaking { color: #2c8a5f; font-weight: bold; }
+    .status.error { color: #c0392b; }
+
+    /* 履歴 */
+    .history-section {
+      width: 420px;
+    }
+
+    .history-section h2 {
+      font-size: 0.95rem;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .history-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .history-list li {
+      background: #fff;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 0.9rem;
+      color: #333;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .history-list li .time { color: #999; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+
+  <h1>診察案内システム</h1>
+
+  <!-- 表示パネル -->
+  <div class="display-panel">
+    <div class="label">受診番号</div>
+    <div class="number empty" id="displayNumber">－</div>
+    <div class="room-label">診察室</div>
+    <div class="room-number empty" id="displayRoom">－</div>
+  </div>
+
+  <!-- 操作パネル -->
+  <div class="control-panel">
+    <div class="form-row">
+      <label>受診番号</label>
+      <input type="number" id="patientNumber" min="1" max="99" placeholder="1〜99" />
+    </div>
+    <div class="form-row">
+      <label>診察室</label>
+      <div class="room-buttons">
+        <button class="room-btn" id="room1" onclick="selectRoom(1)">１</button>
+        <button class="room-btn" id="room2" onclick="selectRoom(2)">２</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>話者</label>
+      <select id="speakerSelect" style="flex:1;padding:6px 10px;font-size:0.9rem;border:2px solid #b0c8e0;border-radius:6px;outline:none;">
+        <option value="13">青山龍星（落ち着いた男性）</option>
+        <option value="3">ずんだもん（明るい）</option>
+        <option value="8">春日部つむぎ（女性）</option>
+        <option value="2">四国めたん（女性・あまあま）</option>
+        <option value="1">四国めたん（女性・ノーマル）</option>
+      </select>
+    </div>
+    <button class="announce-btn" id="announceBtn" onclick="announce()">📢 案内する</button>
+    <button class="repeat-btn" id="repeatBtn" onclick="repeatAnnounce()" disabled>🔁 もう一度</button>
+    <div class="status" id="status">番号と診察室を選択してください</div>
+    <div id="voicevoxStatus" style="text-align:center;font-size:0.78rem;padding:4px 8px;border-radius:4px;"></div>
+  </div>
+
+  <!-- 履歴 -->
+  <div class="history-section">
+    <h2>案内履歴</h2>
+    <ul class="history-list" id="historyList"></ul>
+  </div>
+
+<script>
+  let selectedRoom = null;
+  let lastPatient = null;
+  let lastRoom = null;
+
+  function selectRoom(room) {
+    selectedRoom = room;
+    document.getElementById('room1').classList.toggle('selected', room === 1);
+    document.getElementById('room2').classList.toggle('selected', room === 2);
+  }
+
+  function announce() {
+    const numInput = document.getElementById('patientNumber');
+    const patient = parseInt(numInput.value, 10);
+
+    if (!patient || patient < 1 || patient > 99) {
+      setStatus('受診番号を1〜99で入力してください', 'error');
+      return;
+    }
+    if (!selectedRoom) {
+      setStatus('診察室（1番 または 2番）を選択してください', 'error');
+      return;
+    }
+
+    lastPatient = patient;
+    lastRoom = selectedRoom;
+
+    updateDisplay(patient, selectedRoom);
+    speak(patient, selectedRoom);
+    addHistory(patient, selectedRoom);
+    document.getElementById('repeatBtn').disabled = false;
+  }
+
+  function repeatAnnounce() {
+    if (lastPatient && lastRoom) {
+      speak(lastPatient, lastRoom);
+    }
+  }
+
+  const VOICEVOX_URL = 'http://localhost:50021';
+
+  function fetchWithTimeout(url, options, ms) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    return fetch(url, { ...options, signal: controller.signal })
+      .finally(() => clearTimeout(timer));
+  }
+
+  async function checkVoicevox() {
+    const el = document.getElementById('voicevoxStatus');
+    el.textContent = '🔄 VOICEVOX 確認中...';
+    el.style.background = '#f0f4f8';
+    el.style.color = '#555';
+    try {
+      const res = await fetchWithTimeout(`${VOICEVOX_URL}/version`, {}, 2000);
+      if (res.ok) {
+        const ver = await res.text();
+        el.textContent = `✅ VOICEVOX 接続中 (v${ver.replace(/"/g,'')}) 　高品質モード`;
+        el.style.background = '#e6f4ea';
+        el.style.color = '#2c8a5f';
+        return true;
+      }
+    } catch {}
+    el.textContent = '⚠️ VOICEVOXが起動していません　→　ブラウザ音声で代替中';
+    el.style.background = '#fff8e1';
+    el.style.color = '#8a6d00';
+    return false;
+  }
+
+  async function speakVoicevox(text, speakerId) {
+    const query = await fetchWithTimeout(
+      `${VOICEVOX_URL}/audio_query?text=${encodeURIComponent(text)}&speaker=${speakerId}`,
+      { method: 'POST' }, 5000
+    ).then(r => r.json());
+
+    query.speedScale        = 0.93;
+    query.intonationScale   = 1.15;
+    query.volumeScale       = 1.0;
+    query.prePhonemeLength  = 0.15;
+    query.postPhonemeLength = 0.25;
+
+    const wav = await fetchWithTimeout(
+      `${VOICEVOX_URL}/synthesis?speaker=${speakerId}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(query) },
+      10000
+    ).then(r => r.blob());
+
+    const url = URL.createObjectURL(wav);
+    const audio = new Audio(url);
+    return new Promise((resolve, reject) => {
+      audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+      audio.onerror = () => { URL.revokeObjectURL(url); reject(); };
+      audio.play().catch(reject);
+    });
+  }
+
+  function speakFallback(text) {
+    return new Promise((resolve) => {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'ja-JP'; u.rate = 0.82; u.pitch = 1.0; u.volume = 1.0;
+      const voices = window.speechSynthesis.getVoices();
+      const ja = voices.find(v => v.name.includes('Nanami'))
+               || voices.find(v => v.name.includes('Haruka'))
+               || voices.find(v => v.name.includes('Kyoko'))
+               || voices.find(v => v.lang.startsWith('ja'));
+      if (ja) u.voice = ja;
+      u.onend = resolve; u.onerror = resolve;
+      window.speechSynthesis.speak(u);
+    });
+  }
+
+  async function speak(patient, room) {
+    const text = `${patient}番のかた、診察室${room}番に、おはいりください。`;
+    const speakerId = parseInt(document.getElementById('speakerSelect').value, 10);
+
+    setStatus(`読み上げ中: 「${text}」`, 'speaking');
+    document.getElementById('announceBtn').disabled = true;
+    document.getElementById('repeatBtn').disabled = true;
+
+    try {
+      const vvOk = await checkVoicevox();
+      if (vvOk) {
+        await speakVoicevox(text, speakerId);
+      } else {
+        await speakFallback(text);
+      }
+    } catch {
+      try { await speakFallback(text); } catch {}
+    }
+
+    setStatus('案内完了');
+    document.getElementById('announceBtn').disabled = false;
+    document.getElementById('repeatBtn').disabled = false;
+  }
+
+  function updateDisplay(patient, room) {
+    const numEl = document.getElementById('displayNumber');
+    const roomEl = document.getElementById('displayRoom');
+
+    numEl.classList.remove('empty');
+    numEl.textContent = patient;
+
+    roomEl.classList.remove('empty');
+    roomEl.textContent = room;
+  }
+
+  function setStatus(msg, type = '') {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = 'status ' + type;
+  }
+
+  function addHistory(patient, room) {
+    const list = document.getElementById('historyList');
+    const now = new Date();
+    const time = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    const li = document.createElement('li');
+    li.innerHTML = `<span>受診番号 <strong>${patient}番</strong> → 診察室 <strong>${room}番</strong></span><span class="time">${time}</span>`;
+    list.prepend(li);
+    // 最大10件
+    while (list.children.length > 10) list.removeChild(list.lastChild);
+  }
+
+  // Enterキーで案内
+  document.getElementById('patientNumber').addEventListener('keydown', e => {
+    if (e.key === 'Enter') announce();
+  });
+
+  // 起動時にVOICEVOX接続確認
+  checkVoicevox();
+</script>
+</body>
+</html>
