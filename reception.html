@@ -341,7 +341,7 @@
   let selectedRoom = null;
   let lastPatient = null;
   let lastRoom = null;
-  let announceCancelled = false;
+  let currentAudio = null; // 再生中のVOICEVOX Audioオブジェクト
 
   // ── 診察室選択 ───────────────────────────────────────────────
   function selectRoom(room) {
@@ -376,7 +376,8 @@
   }
 
   function clearDisplay() {
-    announceCancelled = true;
+    // 再生中の音声を即停止
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     window.speechSynthesis.cancel();
     callRef.set({ cleared: true, timestamp: Date.now() });
   }
@@ -488,9 +489,10 @@
 
     const url = URL.createObjectURL(wav);
     const audio = new Audio(url);
+    currentAudio = audio;
     return new Promise((resolve, reject) => {
-      audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
-      audio.onerror = () => { URL.revokeObjectURL(url); reject(); };
+      audio.onended = () => { currentAudio = null; URL.revokeObjectURL(url); resolve(); };
+      audio.onerror = () => { currentAudio = null; URL.revokeObjectURL(url); reject(); };
       audio.play().catch(reject);
     });
   }
@@ -512,26 +514,22 @@
   }
 
   async function speakAnnouncement(patient, room, speakerId) {
-    announceCancelled = false;
     const text = `${patient}番のかた、診察室${room}番に、おはいりください。`;
     setStatus(`読み上げ中: 「${text}」`, 'speaking');
     document.getElementById('announceBtn').disabled = true;
 
     try {
       const vvOk = await checkVoicevox();
-      if (announceCancelled) { document.getElementById('announceBtn').disabled = false; return; }
       if (vvOk) {
         await speakVoicevox(text, speakerId);
       } else {
         await speakFallback(text);
       }
     } catch {
-      if (!announceCancelled) {
-        try { await speakFallback(text); } catch {}
-      }
+      try { await speakFallback(text); } catch {}
     }
 
-    if (!announceCancelled) setStatus('案内完了');
+    setStatus('案内完了');
     document.getElementById('announceBtn').disabled = false;
   }
 
