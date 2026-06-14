@@ -512,9 +512,9 @@
         u.pitch = 1.0;
       } else if (jaVoice) {
         u.voice = jaVoice;
-        u.pitch = 0.7; // 男性らしく低く
+        u.pitch = 1.0; // 男性らしく低く
       } else {
-        u.pitch = 0.7;
+        u.pitch = 1.0;
       }
       u.onend = resolve; u.onerror = resolve;
       window.speechSynthesis.speak(u);
