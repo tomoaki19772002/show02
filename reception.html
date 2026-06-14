@@ -501,13 +501,21 @@
     return new Promise(resolve => {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'ja-JP'; u.rate = 0.82; u.pitch = 1.0; u.volume = 1.0;
+      u.lang = 'ja-JP'; u.rate = 0.82; u.volume = 1.0;
       const voices = window.speechSynthesis.getVoices();
-      const ja = voices.find(v => v.name.includes('Keita'))
-               || voices.find(v => v.name.includes('Ichiro'))
-               || voices.find(v => v.name.includes('Takumi'))
-               || voices.find(v => v.lang.startsWith('ja'));
-      if (ja) u.voice = ja;
+      const maleVoice = voices.find(v => v.name.includes('Keita'))
+                     || voices.find(v => v.name.includes('Ichiro'))
+                     || voices.find(v => v.name.includes('Takumi'));
+      const jaVoice = voices.find(v => v.lang.startsWith('ja'));
+      if (maleVoice) {
+        u.voice = maleVoice;
+        u.pitch = 1.0;
+      } else if (jaVoice) {
+        u.voice = jaVoice;
+        u.pitch = 0.5; // 男性らしく低く
+      } else {
+        u.pitch = 0.5;
+      }
       u.onend = resolve; u.onerror = resolve;
       window.speechSynthesis.speak(u);
     });
