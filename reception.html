@@ -503,9 +503,9 @@
       const u = new SpeechSynthesisUtterance(text);
       u.lang = 'ja-JP'; u.rate = 0.82; u.pitch = 1.0; u.volume = 1.0;
       const voices = window.speechSynthesis.getVoices();
-      const ja = voices.find(v => v.name.includes('Nanami'))
-               || voices.find(v => v.name.includes('Haruka'))
-               || voices.find(v => v.name.includes('Kyoko'))
+      const ja = voices.find(v => v.name.includes('Keita'))
+               || voices.find(v => v.name.includes('Ichiro'))
+               || voices.find(v => v.name.includes('Takumi'))
                || voices.find(v => v.lang.startsWith('ja'));
       if (ja) u.voice = ja;
       u.onend = resolve; u.onerror = resolve;
