@@ -344,21 +344,10 @@
         <button class="room-btn" id="room3" onclick="selectRoom(3)">３</button>
       </div>
     </div>
-    <div class="form-row">
-      <label>話者</label>
-      <select id="speakerSelect" style="flex:1;padding:6px 10px;font-size:0.9rem;border:2px solid #b0c8e0;border-radius:6px;outline:none;">
-        <option value="13">青山龍星（落ち着いた男性）</option>
-        <option value="3">ずんだもん（明るい）</option>
-        <option value="8">春日部つむぎ（女性）</option>
-        <option value="2">四国めたん（女性・あまあま）</option>
-        <option value="1">四国めたん（女性・ノーマル）</option>
-      </select>
-    </div>
     <button class="announce-btn" id="announceBtn" onclick="announce()">📢 案内する</button>
     <button class="repeat-btn" id="repeatBtn" onclick="repeatAnnounce()" disabled>🔁 もう一度</button>
     <button class="clear-btn" onclick="clearDisplay()">現在ご案内していません</button>
     <div class="status" id="status">番号と診察室を選択してください</div>
-    <div id="voicevoxStatus" style="text-align:center;font-size:0.78rem;padding:4px 8px;border-radius:4px;"></div>
   </div>
 
   <!-- 履歴 -->
@@ -387,7 +376,6 @@
   let selectedRoom = null;
   let lastPatient = null;
   let lastRoom = null;
-  let currentAudio = null; // 再生中のVOICEVOX Audioオブジェクト
 
   // ── 診察室選択 ───────────────────────────────────────────────
   function selectRoom(room) {
@@ -410,31 +398,23 @@
       return;
     }
 
-    const speakerId = parseInt(document.getElementById('speakerSelect').value, 10);
-
-    // Firebase に書き込む → 全端末のリスナーが反応する
     callRef.set({
       patient,
       room: selectedRoom,
-      speakerId,
       timestamp: Date.now()
     });
   }
 
   function clearDisplay() {
-    // 再生中の音声を即停止
-    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     window.speechSynthesis.cancel();
     callRef.set({ cleared: true, timestamp: Date.now() });
   }
 
   function repeatAnnounce() {
     if (lastPatient && lastRoom) {
-      const speakerId = parseInt(document.getElementById('speakerSelect').value, 10);
       callRef.set({
         patient: lastPatient,
         room: lastRoom,
-        speakerId,
         timestamp: Date.now()
       });
     }
@@ -473,7 +453,7 @@
         lastRoom    = data.room;
         updateDisplay(data.patient, data.room);
         addHistory(data.patient, data.room);
-        speakAnnouncement(data.patient, data.room, data.speakerId || 13);
+        speakAnnouncement(data.patient, data.room);
         document.getElementById('repeatBtn').disabled = false;
       }
     }
@@ -492,57 +472,7 @@
     }
   });
 
-  // ── VOICEVOX / 音声 ──────────────────────────────────────────
-  const VOICEVOX_URL = 'http://localhost:50021';
-
-  function fetchWithTimeout(url, options, ms) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), ms);
-    return fetch(url, { ...options, signal: controller.signal })
-      .finally(() => clearTimeout(timer));
-  }
-
-  async function checkVoicevox() {
-    const el = document.getElementById('voicevoxStatus');
-    try {
-      const res = await fetchWithTimeout(`${VOICEVOX_URL}/version`, {}, 2000);
-      if (res.ok) {
-        const ver = await res.text();
-        el.textContent = `✅ VOICEVOX 接続中 (v${ver.replace(/"/g,'')})`;
-        el.style.background = '#e6f4ea'; el.style.color = '#2c8a5f';
-        return true;
-      }
-    } catch {}
-    el.textContent = '⚠️ VOICEVOX未起動 → ブラウザ音声で代替';
-    el.style.background = '#fff8e1'; el.style.color = '#8a6d00';
-    return false;
-  }
-
-  async function speakVoicevox(text, speakerId) {
-    const query = await fetchWithTimeout(
-      `${VOICEVOX_URL}/audio_query?text=${encodeURIComponent(text)}&speaker=${speakerId}`,
-      { method: 'POST' }, 5000
-    ).then(r => r.json());
-
-    query.speedScale = 0.93; query.intonationScale = 1.15;
-    query.volumeScale = 1.0; query.prePhonemeLength = 0.15; query.postPhonemeLength = 0.25;
-
-    const wav = await fetchWithTimeout(
-      `${VOICEVOX_URL}/synthesis?speaker=${speakerId}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(query) },
-      10000
-    ).then(r => r.blob());
-
-    const url = URL.createObjectURL(wav);
-    const audio = new Audio(url);
-    currentAudio = audio;
-    return new Promise((resolve, reject) => {
-      audio.onended = () => { currentAudio = null; URL.revokeObjectURL(url); resolve(); };
-      audio.onerror = () => { currentAudio = null; URL.revokeObjectURL(url); reject(); };
-      audio.play().catch(reject);
-    });
-  }
-
+  // ── 音声 ─────────────────────────────────────────────────────
   function speakFallback(text) {
     return new Promise(resolve => {
       window.speechSynthesis.cancel();
@@ -563,21 +493,14 @@
     });
   }
 
-  async function speakAnnouncement(patient, room, speakerId) {
+  async function speakAnnouncement(patient, room) {
     const text = `${patient}番のかた、診察室${room}番に、おはいりください。`;
     setStatus(`読み上げ中: 「${text}」`, 'speaking');
     document.getElementById('announceBtn').disabled = true;
 
     try {
-      const vvOk = await checkVoicevox();
-      if (vvOk) {
-        await speakVoicevox(text, speakerId);
-      } else {
-        await speakFallback(text);
-      }
-    } catch {
-      try { await speakFallback(text); } catch {}
-    }
+      await speakFallback(text);
+    } catch {}
 
     setStatus('案内完了');
     document.getElementById('announceBtn').disabled = false;
@@ -627,8 +550,6 @@
     if (e.key === 'Enter') announce();
   });
 
-  // 起動時 VOICEVOX 確認
-  checkVoicevox();
 </script>
 </body>
 </html>
