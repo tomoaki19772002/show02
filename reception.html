@@ -147,6 +147,44 @@
       border-color: #2c5f8a;
     }
 
+    .number-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .number-input-wrapper input[type="number"] {
+      flex: 1;
+      -moz-appearance: textfield;
+    }
+
+    .number-input-wrapper input[type="number"]::-webkit-inner-spin-button,
+    .number-input-wrapper input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+    }
+
+    .num-btn {
+      width: 48px;
+      height: 48px;
+      font-size: 1.6rem;
+      font-weight: bold;
+      border: 2px solid #b0c8e0;
+      border-radius: 8px;
+      background: #f7fafd;
+      color: #2c5f8a;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+
+    .num-btn:hover { background: #e0ecf8; }
+    .num-btn:active { background: #c8dff5; transform: scale(0.95); }
+
     .room-buttons {
       display: flex;
       gap: 10px;
@@ -293,7 +331,11 @@
   <div class="control-panel">
     <div class="form-row">
       <label>受診番号</label>
-      <input type="number" id="patientNumber" min="1" max="99" placeholder="1〜99" />
+      <div class="number-input-wrapper">
+        <button class="num-btn" onclick="changeNumber(-1)">－</button>
+        <input type="number" id="patientNumber" min="1" max="100" placeholder="1〜100" />
+        <button class="num-btn" onclick="changeNumber(1)">＋</button>
+      </div>
     </div>
     <div class="form-row">
       <label>診察室</label>
@@ -359,8 +401,8 @@
     const numInput = document.getElementById('patientNumber');
     const patient = parseInt(numInput.value, 10);
 
-    if (!patient || patient < 1 || patient > 99) {
-      setStatus('受診番号を1〜99で入力してください', 'error');
+    if (!patient || patient < 1 || patient > 100) {
+      setStatus('受診番号を1〜100で入力してください', 'error');
       return;
     }
     if (!selectedRoom) {
@@ -571,6 +613,13 @@
     li.innerHTML = `<span>受診番号 <strong>${patient}番</strong> → 診察室 <strong>${room}番</strong></span><span class="time">${time}</span>`;
     list.prepend(li);
     while (list.children.length > 10) list.removeChild(list.lastChild);
+  }
+
+  function changeNumber(delta) {
+    const input = document.getElementById('patientNumber');
+    const current = parseInt(input.value, 10) || 0;
+    const next = Math.min(100, Math.max(1, current + delta));
+    input.value = next;
   }
 
   // ── Enterキー ────────────────────────────────────────────────
