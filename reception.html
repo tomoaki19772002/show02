@@ -476,10 +476,10 @@
   function playPingPong() {
     return new Promise(resolve => {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      // ミ・ソ の2音チャイム
+      // ソ・ミ の2音チャイム
       const notes = [
-        { freq: 659, start: 0.0  },
-        { freq: 784, start: 0.45 },
+        { freq: 784, start: 0.0  },
+        { freq: 659, start: 0.45 },
       ];
       notes.forEach(({ freq, start }) => {
         const osc  = ctx.createOscillator();
