@@ -476,11 +476,10 @@
   function playPingPong() {
     return new Promise(resolve => {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      // ド・ミ・ソ の3音チャイム
+      // ミ・ソ の2音チャイム
       const notes = [
-        { freq: 523, start: 0.0  },
-        { freq: 659, start: 0.45 },
-        { freq: 784, start: 0.90 },
+        { freq: 659, start: 0.0  },
+        { freq: 784, start: 0.45 },
       ];
       notes.forEach(({ freq, start }) => {
         const osc  = ctx.createOscillator();
@@ -495,7 +494,7 @@
         osc.start(ctx.currentTime + start);
         osc.stop(ctx.currentTime + start + 1.2);
       });
-      setTimeout(() => { ctx.close(); resolve(); }, 2400);
+      setTimeout(() => { ctx.close(); resolve(); }, 1800);
     });
   }
 
